@@ -17,6 +17,7 @@
 //This is because multiples of 2 have factors of 2. There is no point in using them. 
 
 #include <iostream>
+#include <cmath>
 using namespace std;
 
 int main()
