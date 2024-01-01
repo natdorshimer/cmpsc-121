@@ -137,7 +137,7 @@ private fun getSkirmishOptionFromUser(): SkirmishOption {
     2 -> SkirmishOption.AttackUntilDefeated
     3 -> {
       print("Please input remaining attackers: ")
-      val remainingAttackers = readLine()!!.toInt()
+      val remainingAttackers = getIntegerFromUser()
 
       SkirmishOption.AttackUntilRemaining(remainingAttackers)
     }
