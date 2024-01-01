@@ -39,13 +39,13 @@ dependencies {
 val mainClasses = listOf("dev.natdorshimer.cmpsc.HW3")
 
 mainClasses.forEach { className ->
-  val shortClassName = className.split(".").last()
-  tasks.register(shortClassName, JavaExec::class) {
-    group = "application"
-    description = "Run the application with the main class $className"
-    standardInput = System.`in`
-    mainClass.set("${className}Kt")
+    val shortClassName = className.split(".").last()
+    tasks.register(shortClassName, JavaExec::class) {
+        group = "application"
+        description = "Run the application with the main class $className"
+        standardInput = System.`in`
+        mainClass.set("${className}Kt")
 
-    classpath = sourceSets["main"].runtimeClasspath
-  }
+        classpath = sourceSets["main"].runtimeClasspath
+    }
 }

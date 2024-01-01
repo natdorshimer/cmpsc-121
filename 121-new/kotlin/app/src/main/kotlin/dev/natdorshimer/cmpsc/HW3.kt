@@ -1,146 +1,149 @@
 package dev.natdorshimer.cmpsc
 
 fun main() {
-  val skirmishHandler = SkirmishHandler(
-    maxAttackerDice =  3,
-    maxDefenderDice = 2
-  )
+    val skirmishHandler = SkirmishHandler(
+        maxAttackerDice = 3,
+        maxDefenderDice = 2
+    )
 
-  while (true) {
-    val initialData = getSkirmishDataFromUser()
-    val skirmishOption = getSkirmishOptionFromUser()
+    while (true) {
+        val initialData = getSkirmishDataFromUser()
+        val skirmishOption = getSkirmishOptionFromUser()
 
-    if (skirmishOption is SkirmishOption.Withdraw) {
-      println("You have chosen to withdraw from the battle.\n")
-      continue
+        if (skirmishOption is SkirmishOption.Withdraw) {
+            println("You have chosen to withdraw from the battle.\n")
+            continue
+        }
+
+        val result = skirmishHandler.skirmish(initialData, skirmishOption)
+        printResults(initialData, result)
+
+        if (getShouldQuitFromUser()) {
+            break
+        }
     }
-
-    val result = skirmishHandler.skirmish(initialData, skirmishOption)
-    printResults(initialData, result)
-
-    if (getShouldQuitFromUser()) {
-      break
-    }
-  }
 }
 
 private sealed class SkirmishOption {
-  object Attack: SkirmishOption()
-  object AttackUntilDefeated: SkirmishOption()
-  class AttackUntilRemaining(val attackersRemaining: Int): SkirmishOption()
-  object Withdraw: SkirmishOption()
+    object Attack : SkirmishOption()
+    object AttackUntilDefeated : SkirmishOption()
+    class AttackUntilRemaining(val attackersRemaining: Int) : SkirmishOption()
+    object Withdraw : SkirmishOption()
 }
 
 private class SkirmishHandler(
-  private val maxAttackerDice: Int,
-  private val maxDefenderDice: Int,
+    private val maxAttackerDice: Int,
+    private val maxDefenderDice: Int,
 ) {
-  private fun simpleSkirmish(skirmishData: SkirmishData): SkirmishData {
-    val attackerDice = skirmishData.attackerSize.coerceAtMost(maxAttackerDice)
-    val defenderDice = skirmishData.defenderSize.coerceAtMost(maxDefenderDice)
-
-    val attackerRolls = (1..attackerDice).map { (1..6).random() }.sortedDescending()
-    val defenderRolls = (1..defenderDice).map { (1..6).random() }.sortedDescending()
-
-    val diceToCompare = attackerRolls.zip(defenderRolls)
-    val attackerLosses = diceToCompare.count { (attacker, defender) ->
-      attacker <= defender
+    fun skirmish(skirmishData: SkirmishData, option: SkirmishOption): SkirmishData {
+        return when (option) {
+            is SkirmishOption.Attack -> simpleSkirmish(skirmishData)
+            is SkirmishOption.AttackUntilDefeated -> skirmishWhile(skirmishData) {
+                it.attackerSize > 0 && it.defenderSize > 0
+            }
+            is SkirmishOption.AttackUntilRemaining -> skirmishWhile(skirmishData) {
+                it.attackerSize >= option.attackersRemaining && it.defenderSize > 0
+            }
+            else -> SkirmishData(0, 0)
+        }
     }
 
-    val defenderLosses = diceToCompare.size - attackerLosses
-    return SkirmishData(
-      skirmishData.attackerSize - attackerLosses,
-      skirmishData.defenderSize - defenderLosses,
-    )
-  }
+    private fun simpleSkirmish(skirmishData: SkirmishData): SkirmishData {
+        val attackerDiceCount = skirmishData.attackerSize.coerceAtMost(maxAttackerDice)
+        val defenderDiceCount = skirmishData.defenderSize.coerceAtMost(maxDefenderDice)
 
-  private fun skirmishWhile(skirmishData: SkirmishData, condition: (SkirmishData) -> Boolean): SkirmishData {
-    var skirmishData = skirmishData
-    while(condition(skirmishData)) {
-      skirmishData = simpleSkirmish(skirmishData)
+        val attackerRolls = getDiceRolls(attackerDiceCount).sortedDescending()
+        val defenderRolls = getDiceRolls(defenderDiceCount).sortedDescending()
+
+        val diceToCompare = attackerRolls.zip(defenderRolls)
+
+        val attackerLosses = diceToCompare.count { (attacker, defender) ->
+            attacker <= defender
+        }
+        val defenderLosses = diceToCompare.size - attackerLosses
+
+        return SkirmishData(
+            skirmishData.attackerSize - attackerLosses,
+            skirmishData.defenderSize - defenderLosses,
+        )
     }
-    return skirmishData
-  }
 
-  fun skirmish(skirmishData: SkirmishData, option: SkirmishOption): SkirmishData {
-    return when (option) {
-      is SkirmishOption.Attack -> simpleSkirmish(skirmishData)
-
-      is SkirmishOption.AttackUntilDefeated -> skirmishWhile(skirmishData) {
-        it.attackerSize > 0 && it.defenderSize > 0
-      }
-
-      is SkirmishOption.AttackUntilRemaining -> skirmishWhile(skirmishData) {
-        it.attackerSize >= option.attackersRemaining && it.defenderSize > 0
-      }
-
-      else -> SkirmishData(0, 0)
+    private fun skirmishWhile(skirmishData: SkirmishData, condition: (SkirmishData) -> Boolean): SkirmishData {
+        var skirmishData = skirmishData
+        while (condition(skirmishData)) {
+            skirmishData = simpleSkirmish(skirmishData)
+        }
+        return skirmishData
     }
-  }
+
+
+    private fun getDiceRolls(diceCount: Int): List<Int> {
+        return (1..diceCount).map { (1..6).random() }
+    }
 }
 
 private class SkirmishData(
-  val attackerSize: Int,
-  val defenderSize: Int,
+    val attackerSize: Int,
+    val defenderSize: Int,
 )
 
 private fun getShouldQuitFromUser(): Boolean {
-  print("Would you like to continue? (y/n) ")
-  val input = readLine()!!.lowercase()
-  return input != "y"
+    print("Would you like to continue? (y/n) ")
+    val input = readLine()!!.lowercase()
+    return input != "y"
 }
 
 private fun getSkirmishDataFromUser(): SkirmishData {
-  print("Please input attacker size: ")
-  val attackerSize = getIntegerFromUser()
+    print("Please input attacker size: ")
+    val attackerSize = getIntegerFromUser()
 
-  print("Please input defender size: ")
-  val defenderSize = getIntegerFromUser()
+    print("Please input defender size: ")
+    val defenderSize = getIntegerFromUser()
 
-  println()
+    println()
 
-  return SkirmishData(attackerSize, defenderSize)
+    return SkirmishData(attackerSize, defenderSize)
 }
 
 private fun printResults(initialData: SkirmishData, result: SkirmishData) {
-  println("Attacker size after battle: ${result.attackerSize}")
-  println("Attacker losses: ${initialData.attackerSize - result.attackerSize}")
+    println("Attacker size after battle: ${result.attackerSize}")
+    println("Attacker losses: ${initialData.attackerSize - result.attackerSize}")
 
-  println("Defender size after battle: ${result.defenderSize}")
-  println("Defender losses: ${initialData.defenderSize - result.defenderSize}")
+    println("Defender size after battle: ${result.defenderSize}")
+    println("Defender losses: ${initialData.defenderSize - result.defenderSize}")
 
-  println()
+    println()
 }
 
 private fun getIntegerFromUser(): Int {
-  while(true) {
-    try {
-      return readLine()!!.toInt()
-    } catch (e: NumberFormatException) {
-      println("Invalid input, please try again.")
+    while (true) {
+        try {
+            return readLine()!!.toInt()
+        } catch (e: NumberFormatException) {
+            println("Invalid input, please try again.")
+        }
     }
-  }
 }
 
 private fun getSkirmishOptionFromUser(): SkirmishOption {
-  println("Please choose one of the following:")
+    println("Please choose one of the following:")
 
-  println("1. Attack")
-  println("2. Attack until one army is defeated")
-  println("3. Attack until attacking armies have __ left")
-  println("4. Withdraw from the battle")
+    println("1. Attack")
+    println("2. Attack until one army is defeated")
+    println("3. Attack until attacking armies have __ left")
+    println("4. Withdraw from the battle")
 
-  print("Option: ")
+    print("Option: ")
 
-  return when (getIntegerFromUser()) {
-    1 -> SkirmishOption.Attack
-    2 -> SkirmishOption.AttackUntilDefeated
-    3 -> {
-      print("Please input remaining attackers: ")
-      val remainingAttackers = getIntegerFromUser()
+    return when (getIntegerFromUser()) {
+        1 -> SkirmishOption.Attack
+        2 -> SkirmishOption.AttackUntilDefeated
+        3 -> {
+            print("Please input remaining attackers: ")
+            val remainingAttackers = getIntegerFromUser()
 
-      SkirmishOption.AttackUntilRemaining(remainingAttackers)
+            SkirmishOption.AttackUntilRemaining(remainingAttackers)
+        }
+        else -> SkirmishOption.Withdraw
     }
-    else -> SkirmishOption.Withdraw
-  }
 }
